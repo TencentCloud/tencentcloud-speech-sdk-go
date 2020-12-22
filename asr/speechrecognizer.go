@@ -347,7 +347,7 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	var queryMap = make(map[string]string)
 	queryMap["secretid"] = recognizer.Credential.SecretId
 	queryMap["engine_model_type"] = recognizer.EngineModelType
-	queryMap["voice_format"] = "1"
+	queryMap["voice_format"] = strconv.FormatInt(int64(recognizer.VoiceFormat), 10)
 	queryMap["voice_id"] = voiceID
 
 	var timestamp = time.Now().Unix()
