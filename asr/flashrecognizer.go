@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/tencentcloud/tencentcloud-speech-sdk-go/common"
@@ -81,25 +82,30 @@ var (
 	maxIdleConns        = 100
 	maxIdleConnsPerHost = 2
 	idleConnTimeout     = time.Duration(180) * time.Second
+
+	//once : for once init
+	once sync.Once
 )
 
-// init init http client
-func init() {
-	transport := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		DialContext: (&net.Dialer{
-			Timeout:   time.Duration(connTimeout) * time.Second,
-			KeepAlive: time.Duration(rwTimeout*10) * time.Second,
-			DualStack: true,
-		}).DialContext,
-		MaxIdleConns:          maxIdleConns,
-		IdleConnTimeout:       idleConnTimeout,
-		TLSHandshakeTimeout:   time.Duration(connTimeout) * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-	}
-	httpClient = new(http.Client)
-	httpClient.Transport = transport
-	httpClient.Timeout = time.Duration(rwTimeout) * time.Second
+// initHttpClient init http client
+func initHttpClient() {
+	once.Do(func() {
+		transport := &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   time.Duration(connTimeout) * time.Second,
+				KeepAlive: time.Duration(rwTimeout*10) * time.Second,
+				DualStack: true,
+			}).DialContext,
+			MaxIdleConns:          maxIdleConns,
+			IdleConnTimeout:       idleConnTimeout,
+			TLSHandshakeTimeout:   time.Duration(connTimeout) * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		}
+		httpClient = new(http.Client)
+		httpClient.Transport = transport
+		httpClient.Timeout = time.Duration(rwTimeout) * time.Second
+	})
 }
 
 // FlashRecognizer is the entry for ASR flash recognizer
@@ -110,14 +116,15 @@ type FlashRecognizer struct {
 
 // NewFlashRecognizer creates instance of FlashRecognizer
 func NewFlashRecognizer(appID string, credential *common.Credential) *FlashRecognizer {
+	initHttpClient()
 	return &FlashRecognizer{
 		AppID:      appID,
 		Credential: credential,
 	}
 }
 
-// DoRecognize  DoRecognize
-func (recognizer *FlashRecognizer) DoRecognize(req *FlashRecognitionRequest,
+// Recognize  Recognize
+func (recognizer *FlashRecognizer) Recognize(req *FlashRecognitionRequest,
 	videoData []byte) (*FlashRecognitionResponse, error) {
 
 	signStr, reqUrl := recognizer.buildURL(req)
