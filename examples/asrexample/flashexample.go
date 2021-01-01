@@ -84,7 +84,7 @@ func process(id int, file string) {
 	req.FirstChannelOnly = 1
 	req.WordInfo = 0
 
-	resp, err := recognizer.DoRecognize(req, data)
+	resp, err := recognizer.Recognize(req, data)
 	if err != nil {
 		fmt.Printf("%s|failed do recognize, error: %v\n", time.Now().Format("2006-01-02 15:04:05"), err)
 		return
