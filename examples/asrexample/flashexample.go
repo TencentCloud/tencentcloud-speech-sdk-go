@@ -75,7 +75,7 @@ func process(id int, file string) {
 
 	req := new(asr.FlashRecognitionRequest)
 	req.EngineType = EngineType
-	req.VoiceFormat = "wav"
+	req.VoiceFormat = "pcm"
 	req.SpeakerDiarization = 0
 	req.FilterDirty = 0
 	req.FilterModal = 0
