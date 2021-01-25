@@ -8,7 +8,7 @@
 
 1. Go 1.13 版本及以上，推荐使用go mod方式引用安装。
 2. 使用相关产品前需要在腾讯云控制台已开通相关语音产品。
-3. 在腾讯云控制台[访问管理](https://console.cloud.tencent.com/cam/capi)页面获取 SecretID 和 SecretKey 。
+3. 在腾讯云控制台[账号信息](https://console.cloud.tencent.com/developer)页面查看账号APPID，[访问管理](https://console.cloud.tencent.com/cam/capi)页面获取 SecretID 和 SecretKey 。
 
 # 获取安装
 
