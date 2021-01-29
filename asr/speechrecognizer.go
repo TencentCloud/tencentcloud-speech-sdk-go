@@ -236,11 +236,16 @@ func (recognizer *SpeechRecognizer) stopInternal() error {
 }
 
 func (recognizer *SpeechRecognizer) onError(code int, message string, err error) {
+	recognizer.mutex.Lock()
+	if !recognizer.started {
+		return
+	}
 	recognizer.eventChan <- speechRecognitionEvent{
 		t:   eventTypeFail,
 		r:   newSpeechRecognitionResponse(code, message, recognizer.voiceID, fmt.Sprintf("%s-Error", recognizer.voiceID), 0),
 		err: err,
 	}
+	recognizer.mutex.Unlock()
 	go recognizer.stopInternal()
 }
 
