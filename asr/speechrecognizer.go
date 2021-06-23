@@ -76,7 +76,13 @@ type SpeechRecognizer struct {
 	EngineModelType string
 	VoiceFormat     uint32
 	NeedVad         uint32
-	WordInfo        uint32
+	HotwordId       string
+	CustomizationId string
+	FilterDirty     int
+	FilterModal     int
+	FilterPunc      int
+	ConvertNumMode  int
+	WordInfo        int
 	VadSilenceTime  uint32
 
 	ProxyURL string
@@ -97,9 +103,13 @@ type SpeechRecognizer struct {
 }
 
 const (
-	defaultVoiceFormat = 1
-	defaultNeedVad     = 1
-	defaultWordInfo    = 1
+	defaultVoiceFormat    = 1
+	defaultNeedVad        = 1
+	defaultWordInfo       = 0
+	defaultFilterDirty    = 0
+	defaultFilterModal    = 0
+	defaultFilterPunc     = 0
+	defaultConvertNumMode = 1
 
 	protocol = "wss"
 	host     = "asr.cloud.tencent.com"
@@ -131,6 +141,10 @@ func NewSpeechRecognizer(appID string, credential *common.Credential, engineMode
 		EngineModelType: engineModelType,
 		VoiceFormat:     defaultVoiceFormat,
 		NeedVad:         defaultNeedVad,
+		FilterDirty:     defaultFilterDirty,
+		FilterModal:     defaultFilterModal,
+		FilterPunc:      defaultFilterPunc,
+		ConvertNumMode:  defaultConvertNumMode,
 		WordInfo:        defaultWordInfo,
 
 		dataChan:   make(chan []byte, 10),
@@ -365,6 +379,12 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	if recognizer.VadSilenceTime > 0 {
 		queryMap["vad_silence_time"] = strconv.FormatInt(int64(recognizer.VadSilenceTime), 10)
 	}
+	queryMap["hotword_id"] = recognizer.HotwordId
+	queryMap["customization_id"] = recognizer.CustomizationId
+	queryMap["filter_dirty"] = strconv.FormatInt(int64(recognizer.FilterDirty), 10)
+	queryMap["filter_modal"] = strconv.FormatInt(int64(recognizer.FilterModal), 10)
+	queryMap["filter_punc"] = strconv.FormatInt(int64(recognizer.FilterPunc), 10)
+	queryMap["convert_num_mode"] = strconv.FormatInt(int64(recognizer.ConvertNumMode), 10)
 
 	var keys []string
 	for k := range queryMap {
