@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"sync"
@@ -110,7 +111,11 @@ func initHttpClient() {
 
 // FlashRecognizer is the entry for ASR flash recognizer
 type FlashRecognizer struct {
-	AppID      string
+	AppID string
+
+	//for proxy
+	ProxyURL string
+
 	Credential *common.Credential
 }
 
@@ -133,6 +138,11 @@ func (recognizer *FlashRecognizer) Recognize(req *FlashRecognitionRequest,
 	headers := make(map[string]string)
 	headers["Host"] = flashHost
 	headers["Authorization"] = signature
+
+	if len(recognizer.ProxyURL) > 0 {
+		proxyURL, _ := url.Parse(recognizer.ProxyURL)
+		httpClient.Transport.(*http.Transport).Proxy = http.ProxyURL(proxyURL)
+	}
 
 	httpReq, err := http.NewRequest("POST", reqUrl, bytes.NewReader(videoData))
 	if err != nil {
