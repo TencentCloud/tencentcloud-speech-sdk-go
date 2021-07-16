@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"sync"
@@ -20,12 +21,24 @@ import (
 	"github.com/tencentcloud/tencentcloud-speech-sdk-go/common"
 )
 
-// SpeechRecognitionResponseResultWord SpeechRecognitionResponseResultWord
-type SpeechRecognitionResponseResultWord struct {
-	Word       string `json:"word"`
-	StartTime  uint32 `json:"start_time"`
-	EndTime    uint32 `json:"end_time"`
-	StableFlag uint32 `json:"stable_flag"`
+// SpeechRecognitionListener User must impletement it. Get recognition result
+type SpeechRecognitionListener interface {
+	OnRecognitionStart(*SpeechRecognitionResponse)
+	OnSentenceBegin(*SpeechRecognitionResponse)
+	OnRecognitionResultChange(*SpeechRecognitionResponse)
+	OnSentenceEnd(*SpeechRecognitionResponse)
+	OnRecognitionComplete(*SpeechRecognitionResponse)
+	OnFail(*SpeechRecognitionResponse, error)
+}
+
+// SpeechRecognitionResponse is the reponse of asr service
+type SpeechRecognitionResponse struct {
+	Code      int                             `json:"code"`
+	Message   string                          `json:"message"`
+	VoiceID   string                          `json:"voice_id,omitempty"`
+	MessageID string                          `json:"message_id,omitempty"`
+	Final     uint32                          `json:"final,omitempty"`
+	Result    SpeechRecognitionResponseResult `json:"result,omitempty"`
 }
 
 // SpeechRecognitionResponseResult SpeechRecognitionResponseResult
@@ -39,43 +52,33 @@ type SpeechRecognitionResponseResult struct {
 	WordList     []SpeechRecognitionResponseResultWord `json:"word_list"`
 }
 
-// SpeechRecognitionResponse is the reponse of asr service
-type SpeechRecognitionResponse struct {
-	Code      int                             `json:"code"`
-	Message   string                          `json:"message"`
-	VoiceID   string                          `json:"voice_id,omitempty"`
-	MessageID string                          `json:"message_id,omitempty"`
-	Final     uint32                          `json:"final,omitempty"`
-	Result    SpeechRecognitionResponseResult `json:"result,omitempty"`
+// SpeechRecognitionResponseResultWord SpeechRecognitionResponseResultWord
+type SpeechRecognitionResponseResultWord struct {
+	Word       string `json:"word"`
+	StartTime  uint32 `json:"start_time"`
+	EndTime    uint32 `json:"end_time"`
+	StableFlag uint32 `json:"stable_flag"`
 }
 
-func newSpeechRecognitionResponse(code int, message string, voiceID string, messageID string, final uint32) *SpeechRecognitionResponse {
-	return &SpeechRecognitionResponse{
-		Code:      code,
-		Message:   message,
-		VoiceID:   voiceID,
-		MessageID: messageID,
-		Final:     final,
-	}
-}
-
-// SpeechRecognitionListener is the listener of
-type SpeechRecognitionListener interface {
-	OnRecognitionStart(*SpeechRecognitionResponse)
-	OnSentenceBegin(*SpeechRecognitionResponse)
-	OnRecognitionResultChange(*SpeechRecognitionResponse)
-	OnSentenceEnd(*SpeechRecognitionResponse)
-	OnRecognitionComplete(*SpeechRecognitionResponse)
-	OnFail(*SpeechRecognitionResponse, error)
-}
+// AudioFormat type
+const (
+	AudioFormatPCM   = 1
+	AudioFormatSpeex = 4
+	AudioFormatSilk  = 6
+	AudioFormatMp3   = 8
+	AudioFormatOpus  = 10
+	AudioFormatWav   = 12
+	AudioFormatM4A   = 14
+	AudioFormatAAC   = 16
+)
 
 // SpeechRecognizer is the entry for ASR service
 type SpeechRecognizer struct {
+	//request params
 	AppID           string
-	Credential      *common.Credential
 	EngineModelType string
-	VoiceFormat     uint32
-	NeedVad         uint32
+	VoiceFormat     int
+	NeedVad         int
 	HotwordId       string
 	CustomizationId string
 	FilterDirty     int
@@ -83,22 +86,31 @@ type SpeechRecognizer struct {
 	FilterPunc      int
 	ConvertNumMode  int
 	WordInfo        int
-	VadSilenceTime  uint32
+	VadSilenceTime  int
 
+	Credential *common.Credential
+	//listener
+	listener SpeechRecognitionListener
+	//uuid for voice
+	VoiceID string
+
+	//for proxy
 	ProxyURL string
 
-	conn       *websocket.Conn
-	dataChan   chan []byte
+	//for websocet connection
+	conn *websocket.Conn
+
+	//send data channel
+	dataChan chan []byte
+	//for listener get response message
+	eventChan chan speechRecognitionEvent
+
+	//used in stop function, waiting for stop all goroutines
 	sendEnd    chan int
 	receiveEnd chan int
-	voiceID    string
-	mutex      sync.Mutex
+	eventEnd   chan int
 
-	eventChan chan speechRecognitionEvent
-	eventEnd  chan int
-
-	listener SpeechRecognitionListener
-
+	mutex   sync.Mutex
 	started bool
 }
 
@@ -134,8 +146,10 @@ type speechRecognitionEvent struct {
 }
 
 // NewSpeechRecognizer creates instance of SpeechRecognizer
-func NewSpeechRecognizer(appID string, credential *common.Credential, engineModelType string, listener SpeechRecognitionListener) *SpeechRecognizer {
-	return &SpeechRecognizer{
+func NewSpeechRecognizer(appID string, credential *common.Credential, engineModelType string,
+	listener SpeechRecognitionListener) *SpeechRecognizer {
+
+	reco := &SpeechRecognizer{
 		AppID:           appID,
 		Credential:      credential,
 		EngineModelType: engineModelType,
@@ -147,17 +161,17 @@ func NewSpeechRecognizer(appID string, credential *common.Credential, engineMode
 		ConvertNumMode:  defaultConvertNumMode,
 		WordInfo:        defaultWordInfo,
 
-		dataChan:   make(chan []byte, 10),
+		dataChan:  make(chan []byte, 10),
+		eventChan: make(chan speechRecognitionEvent, 10),
+
 		sendEnd:    make(chan int),
 		receiveEnd: make(chan int),
-
-		eventChan: make(chan speechRecognitionEvent, 10),
-		eventEnd:  make(chan int),
+		eventEnd:   make(chan int),
 
 		listener: listener,
-
-		started: false,
+		started:  false,
 	}
+	return reco
 }
 
 // Start connects to server and start a recognition session
@@ -168,11 +182,13 @@ func (recognizer *SpeechRecognizer) Start() error {
 	if recognizer.started {
 		return fmt.Errorf("recognizer is already started")
 	}
-	voiceID := uuid.New().String()
-	serverURL := recognizer.buildURL(voiceID)
+	if recognizer.VoiceID == "" {
+		voiceID := uuid.New().String()
+		recognizer.VoiceID = voiceID
+	}
+	serverURL := recognizer.buildURL(recognizer.VoiceID)
 	signature := recognizer.genSignature(serverURL)
 
-	recognizer.voiceID = voiceID
 	dialer := websocket.Dialer{}
 	if len(recognizer.ProxyURL) > 0 {
 		proxyURL, _ := url.Parse(recognizer.ProxyURL)
@@ -183,22 +199,23 @@ func (recognizer *SpeechRecognizer) Start() error {
 	urlStr := fmt.Sprintf("%s://%s&signature=%s", protocol, serverURL, url.QueryEscape(signature))
 	conn, _, err := dialer.Dial(urlStr, header)
 	if err != nil {
-		return fmt.Errorf("voice_id: %s, error: %s", recognizer.voiceID, err.Error())
+		return fmt.Errorf("voice_id: %s, error: %s", recognizer.VoiceID, err.Error())
 	}
 	_, data, err := conn.ReadMessage()
 	if err != nil {
 		conn.Close()
-		return fmt.Errorf("voice_id: %s, error: %s", recognizer.voiceID, err.Error())
+		return fmt.Errorf("voice_id: %s, error: %s", recognizer.VoiceID, err.Error())
 	}
 	msg := SpeechRecognitionResponse{}
 	err = json.Unmarshal(data, &msg)
 	if err != nil {
 		conn.Close()
-		return fmt.Errorf("voice_id: %s, error: %s", recognizer.voiceID, err.Error())
+		return fmt.Errorf("voice_id: %s, error: %s", recognizer.VoiceID, err.Error())
 	}
 	if msg.Code != 0 {
 		conn.Close()
-		return fmt.Errorf("voice_id: %s, code: %d, message: %s", recognizer.voiceID, msg.Code, msg.Message)
+		return fmt.Errorf("voice_id: %s, code: %d, message: %s",
+			recognizer.VoiceID, msg.Code, msg.Message)
 	}
 
 	recognizer.conn = conn
@@ -208,13 +225,15 @@ func (recognizer *SpeechRecognizer) Start() error {
 	recognizer.started = true
 
 	recognizer.eventChan <- speechRecognitionEvent{
-		t:   eventTypeRecognitionStart,
-		r:   newSpeechRecognitionResponse(0, "sucess", voiceID, fmt.Sprintf("%s-RecognitionStart", voiceID), 0),
+		t: eventTypeRecognitionStart,
+		r: newSpeechRecognitionResponse(0, "sucess", recognizer.VoiceID,
+			fmt.Sprintf("%s-RecognitionStart", recognizer.VoiceID), 0),
 		err: nil,
 	}
 	return nil
 }
 
+// Write : write data in channel
 func (recognizer *SpeechRecognizer) Write(data []byte) error {
 	recognizer.mutex.Lock()
 	defer recognizer.mutex.Unlock()
@@ -254,9 +273,11 @@ func (recognizer *SpeechRecognizer) onError(code int, message string, err error)
 	if !recognizer.started {
 		return
 	}
+
 	recognizer.eventChan <- speechRecognitionEvent{
-		t:   eventTypeFail,
-		r:   newSpeechRecognitionResponse(code, message, recognizer.voiceID, fmt.Sprintf("%s-Error", recognizer.voiceID), 0),
+		t: eventTypeFail,
+		r: newSpeechRecognitionResponse(code, message, recognizer.VoiceID,
+			fmt.Sprintf("%s-Error", recognizer.VoiceID), 0),
 		err: err,
 	}
 	recognizer.mutex.Unlock()
@@ -265,21 +286,29 @@ func (recognizer *SpeechRecognizer) onError(code int, message string, err error)
 
 func (recognizer *SpeechRecognizer) send() {
 	defer func() {
+		// handle panic
+		recognizer.genRecoverFunc()()
 		close(recognizer.sendEnd)
 	}()
+	//send data
 	for data := range recognizer.dataChan {
 		if err := recognizer.conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
-			recognizer.onError(-1, "send error", fmt.Errorf("voice_id: %s, error: %s", recognizer.voiceID, err.Error()))
+			recognizer.onError(-1, "send error", fmt.Errorf("voice_id: %s, error: %s",
+				recognizer.VoiceID, err.Error()))
 			return
 		}
 	}
+	//send stop msg
 	if err := recognizer.conn.WriteMessage(websocket.TextMessage, []byte("{\"type\":\"end\"}")); err != nil {
-		recognizer.onError(-1, "send error", fmt.Errorf("voice_id: %s, error: %s", recognizer.voiceID, err.Error()))
+		recognizer.onError(-1, "send error", fmt.Errorf("voice_id: %s, error: %s",
+			recognizer.VoiceID, err.Error()))
 	}
 }
 
 func (recognizer *SpeechRecognizer) eventDispatch() {
 	defer func() {
+		// handle panic
+		recognizer.genRecoverFunc()()
 		close(recognizer.eventEnd)
 	}()
 	for e := range recognizer.eventChan {
@@ -302,6 +331,8 @@ func (recognizer *SpeechRecognizer) eventDispatch() {
 
 func (recognizer *SpeechRecognizer) receive() {
 	defer func() {
+		// handle panic
+		recognizer.genRecoverFunc()()
 		close(recognizer.eventChan)
 		close(recognizer.receiveEnd)
 	}()
@@ -309,7 +340,7 @@ func (recognizer *SpeechRecognizer) receive() {
 	for {
 		_, data, err := recognizer.conn.ReadMessage()
 		if err != nil {
-			recognizer.onError(-1, "receive error", fmt.Errorf("voice_id: %s, error: %s", recognizer.voiceID, err.Error()))
+			recognizer.onError(-1, "receive error", fmt.Errorf("voice_id: %s, error: %s", recognizer.VoiceID, err.Error()))
 			break
 		}
 
@@ -317,11 +348,15 @@ func (recognizer *SpeechRecognizer) receive() {
 		msg := SpeechRecognitionResponse{}
 		err = json.Unmarshal(data, &msg)
 		if err != nil {
-			recognizer.onError(-1, "receive error", fmt.Errorf("voice_id: %s, error: %s", recognizer.voiceID, err.Error()))
+			recognizer.onError(-1, "receive error",
+				fmt.Errorf("voice_id: %s, error: %s",
+					recognizer.VoiceID, err.Error()))
 			break
 		}
 		if msg.Code != 0 {
-			recognizer.onError(msg.Code, msg.Message, fmt.Errorf("voiceID: %s, error code %d, message: %s", recognizer.voiceID, msg.Code, msg.Message))
+			recognizer.onError(msg.Code, msg.Message,
+				fmt.Errorf("VoiceID: %s, error code %d, message: %s",
+					recognizer.VoiceID, msg.Code, msg.Message))
 			break
 		}
 
@@ -365,26 +400,27 @@ func (recognizer *SpeechRecognizer) receive() {
 func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	var queryMap = make(map[string]string)
 	queryMap["secretid"] = recognizer.Credential.SecretId
-	queryMap["engine_model_type"] = recognizer.EngineModelType
-	queryMap["voice_format"] = strconv.FormatInt(int64(recognizer.VoiceFormat), 10)
-	queryMap["voice_id"] = voiceID
-
 	var timestamp = time.Now().Unix()
 	var timestampStr = strconv.FormatInt(timestamp, 10)
 	queryMap["timestamp"] = timestampStr
 	queryMap["expired"] = strconv.FormatInt(timestamp+24*60*60, 10)
 	queryMap["nonce"] = timestampStr
+
+	//params
+	queryMap["engine_model_type"] = recognizer.EngineModelType
+	queryMap["voice_id"] = voiceID
+	queryMap["voice_format"] = strconv.FormatInt(int64(recognizer.VoiceFormat), 10)
 	queryMap["needvad"] = strconv.FormatInt(int64(recognizer.NeedVad), 10)
-	queryMap["word_info"] = strconv.FormatInt(int64(recognizer.WordInfo), 10)
-	if recognizer.VadSilenceTime > 0 {
-		queryMap["vad_silence_time"] = strconv.FormatInt(int64(recognizer.VadSilenceTime), 10)
-	}
 	queryMap["hotword_id"] = recognizer.HotwordId
 	queryMap["customization_id"] = recognizer.CustomizationId
 	queryMap["filter_dirty"] = strconv.FormatInt(int64(recognizer.FilterDirty), 10)
 	queryMap["filter_modal"] = strconv.FormatInt(int64(recognizer.FilterModal), 10)
 	queryMap["filter_punc"] = strconv.FormatInt(int64(recognizer.FilterPunc), 10)
 	queryMap["convert_num_mode"] = strconv.FormatInt(int64(recognizer.ConvertNumMode), 10)
+	queryMap["word_info"] = strconv.FormatInt(int64(recognizer.WordInfo), 10)
+	if recognizer.VadSilenceTime > 0 {
+		queryMap["vad_silence_time"] = strconv.FormatInt(int64(recognizer.VadSilenceTime), 10)
+	}
 
 	var keys []string
 	for k := range queryMap {
@@ -404,6 +440,7 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	rsLen := len(rs)
 	queryStr := string(rs[0 : rsLen-1])
 
+	//gen url
 	url := fmt.Sprintf("%s/asr/v2/%s?%s", host, recognizer.AppID, queryStr)
 	return url
 }
@@ -416,4 +453,36 @@ func (recognizer *SpeechRecognizer) genSignature(url string) string {
 	var signature = base64.StdEncoding.EncodeToString(encryptedStr)
 
 	return signature
+}
+
+func newSpeechRecognitionResponse(code int, message string, voiceID string,
+	messageID string, final uint32) *SpeechRecognitionResponse {
+	return &SpeechRecognitionResponse{
+		Code:      code,
+		Message:   message,
+		VoiceID:   voiceID,
+		MessageID: messageID,
+		Final:     final,
+	}
+}
+
+func (recognizer *SpeechRecognizer) genRecoverFunc() func() {
+	return func() {
+		if r := recover(); r != nil {
+			var err error
+			switch r := r.(type) {
+			case error:
+				err = r
+			default:
+				err = fmt.Errorf("%v", r)
+			}
+			retErr := fmt.Errorf("panic error ocurred! [err: %s] [stack: %s]", err.Error(), string(debug.Stack()))
+			recognizer.eventChan <- speechRecognitionEvent{
+				t: eventTypeFail,
+				r: newSpeechRecognitionResponse(-1, "panic error", recognizer.VoiceID,
+					fmt.Sprintf("%s-Error", recognizer.VoiceID), 0),
+				err: retErr,
+			}
+		}
+	}
 }

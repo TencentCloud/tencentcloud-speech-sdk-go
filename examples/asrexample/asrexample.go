@@ -89,7 +89,10 @@ func main() {
 func processLoop(id int, wg *sync.WaitGroup, file string) {
 	defer wg.Done()
 	for {
-		process(id, file)
+		err := process(id, file)
+		if err != nil {
+			return
+		}
 	}
 }
 
@@ -98,12 +101,12 @@ func processOnce(id int, wg *sync.WaitGroup, file string) {
 	process(id, file)
 }
 
-func process(id int, file string) {
+func process(id int, file string) error {
 	audio, err := os.Open(file)
 	defer audio.Close()
 	if err != nil {
 		fmt.Printf("open file error: %v\n", err)
-		return
+		return err
 	}
 
 	listener := &MySpeechRecognitionListener{
@@ -112,10 +115,11 @@ func process(id int, file string) {
 	credential := common.NewCredential(SecretID, SecretKey)
 	recognizer := asr.NewSpeechRecognizer(AppID, credential, EngineModelType, listener)
 	recognizer.ProxyURL = proxyURL
+	recognizer.VoiceFormat = asr.AudioFormatPCM
 	err = recognizer.Start()
 	if err != nil {
 		fmt.Printf("%s|recognizer start failed, error: %v\n", time.Now().Format("2006-01-02 15:04:05"), err)
-		return
+		return err
 	}
 	data := make([]byte, SliceSize)
 	for n, err := audio.Read(data); n > 0; n, err = audio.Read(data) {
@@ -133,4 +137,5 @@ func process(id int, file string) {
 		time.Sleep(20 * time.Millisecond)
 	}
 	recognizer.Stop()
+	return nil
 }
