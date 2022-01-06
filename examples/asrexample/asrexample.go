@@ -21,7 +21,7 @@ var (
 	// EngineModelType EngineModelType
 	EngineModelType = "16k_zh"
 	// SliceSize SliceSize
-	SliceSize = 640
+	SliceSize = 6400
 )
 
 // MySpeechRecognitionListener implementation of SpeechRecognitionListener
