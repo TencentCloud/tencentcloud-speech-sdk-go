@@ -121,8 +121,9 @@ func process(id int, file string) error {
 		fmt.Printf("%s|recognizer start failed, error: %v\n", time.Now().Format("2006-01-02 15:04:05"), err)
 		return err
 	}
-	data := make([]byte, SliceSize)
-	for n, err := audio.Read(data); n > 0; n, err = audio.Read(data) {
+	for {
+		data := make([]byte, SliceSize)
+		n, err := audio.Read(data)
 		if err != nil {
 			if err.Error() == "EOF" {
 				break
@@ -130,11 +131,15 @@ func process(id int, file string) error {
 			fmt.Printf("read file error: %v\n", err)
 			break
 		}
+		if n <= 0 {
+			break
+		}
 		err = recognizer.Write(data)
 		if err != nil {
 			break
 		}
-		time.Sleep(20 * time.Millisecond)
+		//模拟真实场景，200ms产生200ms数据
+		//time.Sleep(200 * time.Millisecond)
 	}
 	recognizer.Stop()
 	return nil

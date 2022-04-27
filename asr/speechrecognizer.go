@@ -161,7 +161,7 @@ func NewSpeechRecognizer(appID string, credential *common.Credential, engineMode
 		ConvertNumMode:  defaultConvertNumMode,
 		WordInfo:        defaultWordInfo,
 
-		dataChan:  make(chan []byte, 10),
+		dataChan:  make(chan []byte, 6400),
 		eventChan: make(chan speechRecognitionEvent, 10),
 
 		sendEnd:    make(chan int),
