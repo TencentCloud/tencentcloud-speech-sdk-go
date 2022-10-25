@@ -476,7 +476,8 @@ func (recognizer *SpeechRecognizer) genRecoverFunc() func() {
 			default:
 				err = fmt.Errorf("%v", r)
 			}
-			retErr := fmt.Errorf("panic error ocurred! [err: %s] [stack: %s]", err.Error(), string(debug.Stack()))
+			retErr := fmt.Errorf("panic error ocurred! [err: %s] [stack: %s]",
+				err.Error(), string(debug.Stack()))
 			recognizer.eventChan <- speechRecognitionEvent{
 				t: eventTypeFail,
 				r: newSpeechRecognitionResponse(-1, "panic error", recognizer.VoiceID,
