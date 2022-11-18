@@ -75,18 +75,19 @@ const (
 // SpeechRecognizer is the entry for ASR service
 type SpeechRecognizer struct {
 	//request params
-	AppID           string
-	EngineModelType string
-	VoiceFormat     int
-	NeedVad         int
-	HotwordId       string
-	CustomizationId string
-	FilterDirty     int
-	FilterModal     int
-	FilterPunc      int
-	ConvertNumMode  int
-	WordInfo        int
-	VadSilenceTime  int
+	AppID            string
+	EngineModelType  string
+	VoiceFormat      int
+	NeedVad          int
+	HotwordId        string
+	CustomizationId  string
+	FilterDirty      int
+	FilterModal      int
+	FilterPunc       int
+	ConvertNumMode   int
+	WordInfo         int
+	VadSilenceTime   int
+	ReinforceHotword int
 
 	Credential *common.Credential
 	//listener
@@ -115,13 +116,14 @@ type SpeechRecognizer struct {
 }
 
 const (
-	defaultVoiceFormat    = 1
-	defaultNeedVad        = 1
-	defaultWordInfo       = 0
-	defaultFilterDirty    = 0
-	defaultFilterModal    = 0
-	defaultFilterPunc     = 0
-	defaultConvertNumMode = 1
+	defaultVoiceFormat      = 1
+	defaultNeedVad          = 1
+	defaultWordInfo         = 0
+	defaultFilterDirty      = 0
+	defaultFilterModal      = 0
+	defaultFilterPunc       = 0
+	defaultConvertNumMode   = 1
+	defaultReinforceHotword = 0
 
 	protocol = "wss"
 	host     = "asr.cloud.tencent.com"
@@ -150,16 +152,17 @@ func NewSpeechRecognizer(appID string, credential *common.Credential, engineMode
 	listener SpeechRecognitionListener) *SpeechRecognizer {
 
 	reco := &SpeechRecognizer{
-		AppID:           appID,
-		Credential:      credential,
-		EngineModelType: engineModelType,
-		VoiceFormat:     defaultVoiceFormat,
-		NeedVad:         defaultNeedVad,
-		FilterDirty:     defaultFilterDirty,
-		FilterModal:     defaultFilterModal,
-		FilterPunc:      defaultFilterPunc,
-		ConvertNumMode:  defaultConvertNumMode,
-		WordInfo:        defaultWordInfo,
+		AppID:            appID,
+		Credential:       credential,
+		EngineModelType:  engineModelType,
+		VoiceFormat:      defaultVoiceFormat,
+		NeedVad:          defaultNeedVad,
+		FilterDirty:      defaultFilterDirty,
+		FilterModal:      defaultFilterModal,
+		FilterPunc:       defaultFilterPunc,
+		ConvertNumMode:   defaultConvertNumMode,
+		WordInfo:         defaultWordInfo,
+		ReinforceHotword: defaultReinforceHotword,
 
 		dataChan:  make(chan []byte, 6400),
 		eventChan: make(chan speechRecognitionEvent, 10),
@@ -418,6 +421,7 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	queryMap["filter_punc"] = strconv.FormatInt(int64(recognizer.FilterPunc), 10)
 	queryMap["convert_num_mode"] = strconv.FormatInt(int64(recognizer.ConvertNumMode), 10)
 	queryMap["word_info"] = strconv.FormatInt(int64(recognizer.WordInfo), 10)
+	queryMap["reinforce_hotword"] = strconv.FormatInt(int64(recognizer.ReinforceHotword), 10)
 	if recognizer.VadSilenceTime > 0 {
 		queryMap["vad_silence_time"] = strconv.FormatInt(int64(recognizer.VadSilenceTime), 10)
 	}
