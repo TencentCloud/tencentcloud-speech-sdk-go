@@ -32,6 +32,8 @@ type FlashRecognitionRequest struct {
 	ConvertNumMode     int32  `json:"convert_num_mode"`
 	WordInfo           int32  `json:"word_info"`
 	FirstChannelOnly   int32  `json:"first_channel_only"`
+	ReinforceHotword   int32  `json:"reinforce_hotword"`
+	SentenceMaxLength  int32  `json:"sentence_max_length"`
 }
 
 // FlashRecognitionResponse FlashRecognitionResponse
@@ -190,6 +192,8 @@ func (recognizer *FlashRecognizer) buildURL(req *FlashRecognitionRequest) (strin
 	queryMap["convert_num_mode"] = strconv.FormatInt(int64(req.ConvertNumMode), 10)
 	queryMap["word_info"] = strconv.FormatInt(int64(req.WordInfo), 10)
 	queryMap["first_channel_only"] = strconv.FormatInt(int64(req.FirstChannelOnly), 10)
+	queryMap["reinforce_hotword"] = strconv.FormatInt(int64(req.ReinforceHotword), 10)
+	queryMap["sentence_max_length"] = strconv.FormatInt(int64(req.SentenceMaxLength), 10)
 	var timestamp = time.Now().Unix()
 	var timestampStr = strconv.FormatInt(timestamp, 10)
 	queryMap["timestamp"] = timestampStr
