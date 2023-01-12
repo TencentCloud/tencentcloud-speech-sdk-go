@@ -75,19 +75,21 @@ const (
 // SpeechRecognizer is the entry for ASR service
 type SpeechRecognizer struct {
 	//request params
-	AppID            string
-	EngineModelType  string
-	VoiceFormat      int
-	NeedVad          int
-	HotwordId        string
-	CustomizationId  string
-	FilterDirty      int
-	FilterModal      int
-	FilterPunc       int
-	ConvertNumMode   int
-	WordInfo         int
-	VadSilenceTime   int
-	ReinforceHotword int
+	AppID             string
+	EngineModelType   string
+	VoiceFormat       int
+	NeedVad           int
+	HotwordId         string
+	CustomizationId   string
+	FilterDirty       int
+	FilterModal       int
+	FilterPunc        int
+	ConvertNumMode    int
+	WordInfo          int
+	VadSilenceTime    int
+	ReinforceHotword  int
+	NoiseThreshold    int
+	FilterEmptyResult int
 
 	Credential *common.Credential
 	//listener
@@ -116,14 +118,15 @@ type SpeechRecognizer struct {
 }
 
 const (
-	defaultVoiceFormat      = 1
-	defaultNeedVad          = 1
-	defaultWordInfo         = 0
-	defaultFilterDirty      = 0
-	defaultFilterModal      = 0
-	defaultFilterPunc       = 0
-	defaultConvertNumMode   = 1
-	defaultReinforceHotword = 0
+	defaultVoiceFormat       = 1
+	defaultNeedVad           = 1
+	defaultWordInfo          = 0
+	defaultFilterDirty       = 0
+	defaultFilterModal       = 0
+	defaultFilterPunc        = 0
+	defaultConvertNumMode    = 1
+	defaultReinforceHotword  = 0
+	defaultFilterEmptyResult = 1
 
 	protocol = "wss"
 	host     = "asr.cloud.tencent.com"
@@ -152,17 +155,18 @@ func NewSpeechRecognizer(appID string, credential *common.Credential, engineMode
 	listener SpeechRecognitionListener) *SpeechRecognizer {
 
 	reco := &SpeechRecognizer{
-		AppID:            appID,
-		Credential:       credential,
-		EngineModelType:  engineModelType,
-		VoiceFormat:      defaultVoiceFormat,
-		NeedVad:          defaultNeedVad,
-		FilterDirty:      defaultFilterDirty,
-		FilterModal:      defaultFilterModal,
-		FilterPunc:       defaultFilterPunc,
-		ConvertNumMode:   defaultConvertNumMode,
-		WordInfo:         defaultWordInfo,
-		ReinforceHotword: defaultReinforceHotword,
+		AppID:             appID,
+		Credential:        credential,
+		EngineModelType:   engineModelType,
+		VoiceFormat:       defaultVoiceFormat,
+		NeedVad:           defaultNeedVad,
+		FilterDirty:       defaultFilterDirty,
+		FilterModal:       defaultFilterModal,
+		FilterPunc:        defaultFilterPunc,
+		ConvertNumMode:    defaultConvertNumMode,
+		WordInfo:          defaultWordInfo,
+		ReinforceHotword:  defaultReinforceHotword,
+		FilterEmptyResult: defaultFilterEmptyResult,
 
 		dataChan:  make(chan []byte, 6400),
 		eventChan: make(chan speechRecognitionEvent, 10),
@@ -418,16 +422,24 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	queryMap["voice_id"] = voiceID
 	queryMap["voice_format"] = strconv.FormatInt(int64(recognizer.VoiceFormat), 10)
 	queryMap["needvad"] = strconv.FormatInt(int64(recognizer.NeedVad), 10)
-	queryMap["hotword_id"] = recognizer.HotwordId
-	queryMap["customization_id"] = recognizer.CustomizationId
+	if recognizer.HotwordId != "" {
+		queryMap["hotword_id"] = recognizer.HotwordId
+	}
+	if recognizer.CustomizationId != "" {
+		queryMap["customization_id"] = recognizer.CustomizationId
+	}
 	queryMap["filter_dirty"] = strconv.FormatInt(int64(recognizer.FilterDirty), 10)
 	queryMap["filter_modal"] = strconv.FormatInt(int64(recognizer.FilterModal), 10)
 	queryMap["filter_punc"] = strconv.FormatInt(int64(recognizer.FilterPunc), 10)
+	queryMap["filter_empty_result"] = strconv.FormatInt(int64(recognizer.FilterEmptyResult), 10)
 	queryMap["convert_num_mode"] = strconv.FormatInt(int64(recognizer.ConvertNumMode), 10)
 	queryMap["word_info"] = strconv.FormatInt(int64(recognizer.WordInfo), 10)
 	queryMap["reinforce_hotword"] = strconv.FormatInt(int64(recognizer.ReinforceHotword), 10)
 	if recognizer.VadSilenceTime > 0 {
 		queryMap["vad_silence_time"] = strconv.FormatInt(int64(recognizer.VadSilenceTime), 10)
+	}
+	if recognizer.NoiseThreshold != 0 {
+		queryMap["noise_threshold"] = strconv.FormatInt(int64(recognizer.NoiseThreshold), 10)
 	}
 
 	var keys []string
