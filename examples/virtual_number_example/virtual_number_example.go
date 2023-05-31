@@ -13,18 +13,11 @@ import (
 var (
 	//TODO 补充信息
 	// AppID AppID
-	//AppID = ""
-	//// SecretID SecretID
-	//SecretID = ""
-	//// SecretKey SecretKey
-	//SecretKey = ""
-
-	// AppID AppID
-	AppID = "1256237915"
+	AppID = ""
 	// SecretID SecretID
-	SecretID = "AKIDjTG5peZN6Xo1CC2nPo4DG9pfP3eO4c3M"
+	SecretID = ""
 	// SecretKey SecretKey
-	SecretKey = "ITenocRAmDUb3V0Vs7JOMDu6Zs0JXaPz"
+	SecretKey = ""
 
 	// SliceSize SliceSize
 	SliceSize = 3200
