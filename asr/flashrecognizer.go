@@ -25,6 +25,7 @@ type FlashRecognitionRequest struct {
 	VoiceFormat        string `json:"voice_format"`
 	SpeakerDiarization uint32 `json:"speaker_diarization"`
 	HotwordId          string `json:"hotword_id"`
+	HotwordList        string `json:"hotword_list"`
 	CustomizationId    string `json:"customization_id"`
 	FilterDirty        int32  `json:"filter_dirty"`
 	FilterModal        int32  `json:"filter_modal"`
@@ -185,6 +186,7 @@ func (recognizer *FlashRecognizer) buildURL(req *FlashRecognitionRequest) (strin
 	queryMap["voice_format"] = req.VoiceFormat
 	queryMap["speaker_diarization"] = strconv.FormatInt(int64(req.SpeakerDiarization), 10)
 	queryMap["hotword_id"] = req.HotwordId
+	queryMap["hotword_list"] = req.HotwordList
 	queryMap["customization_id"] = req.CustomizationId
 	queryMap["filter_dirty"] = strconv.FormatInt(int64(req.FilterDirty), 10)
 	queryMap["filter_modal"] = strconv.FormatInt(int64(req.FilterModal), 10)

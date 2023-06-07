@@ -80,6 +80,7 @@ type SpeechRecognizer struct {
 	VoiceFormat       int
 	NeedVad           int
 	HotwordId         string
+	HotwordList       string
 	CustomizationId   string
 	FilterDirty       int
 	FilterModal       int
@@ -424,6 +425,9 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	queryMap["needvad"] = strconv.FormatInt(int64(recognizer.NeedVad), 10)
 	if recognizer.HotwordId != "" {
 		queryMap["hotword_id"] = recognizer.HotwordId
+	}
+	if recognizer.HotwordList != "" {
+		queryMap["hotword_list"] = recognizer.HotwordList
 	}
 	if recognizer.CustomizationId != "" {
 		queryMap["customization_id"] = recognizer.CustomizationId
