@@ -89,7 +89,7 @@ type SpeechRecognizer struct {
 	WordInfo          int
 	VadSilenceTime    int
 	ReinforceHotword  int
-	NoiseThreshold    int
+	NoiseThreshold    float64
 	FilterEmptyResult int
 
 	Credential *common.Credential
@@ -443,7 +443,7 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 		queryMap["vad_silence_time"] = strconv.FormatInt(int64(recognizer.VadSilenceTime), 10)
 	}
 	if recognizer.NoiseThreshold != 0 {
-		queryMap["noise_threshold"] = strconv.FormatInt(int64(recognizer.NoiseThreshold), 10)
+		queryMap["noise_threshold"] = strconv.FormatFloat(recognizer.NoiseThreshold, 'f', 3, 64)
 	}
 
 	var keys []string
