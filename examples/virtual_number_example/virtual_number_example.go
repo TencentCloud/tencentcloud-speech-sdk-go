@@ -12,13 +12,11 @@ import (
 
 var (
 	//TODO 补充信息
-	// AppID AppID
-	AppID = ""
+	AppID = "AppID"
 	// SecretID SecretID
-	SecretID = ""
+	SecretID = "SecretID"
 	// SecretKey SecretKey
-	SecretKey = ""
-
+	SecretKey = "SecretKey"
 	// SliceSize SliceSize
 	SliceSize = 3200
 )
