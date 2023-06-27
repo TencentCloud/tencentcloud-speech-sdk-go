@@ -80,6 +80,7 @@ type SpeechRecognizer struct {
 	VoiceFormat       int
 	NeedVad           int
 	HotwordId         string
+	HotwordList       string
 	CustomizationId   string
 	FilterDirty       int
 	FilterModal       int
@@ -88,7 +89,7 @@ type SpeechRecognizer struct {
 	WordInfo          int
 	VadSilenceTime    int
 	ReinforceHotword  int
-	NoiseThreshold    int
+	NoiseThreshold    float64
 	FilterEmptyResult int
 
 	Credential *common.Credential
@@ -425,6 +426,9 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	if recognizer.HotwordId != "" {
 		queryMap["hotword_id"] = recognizer.HotwordId
 	}
+	if recognizer.HotwordList != "" {
+		queryMap["hotword_list"] = recognizer.HotwordList
+	}
 	if recognizer.CustomizationId != "" {
 		queryMap["customization_id"] = recognizer.CustomizationId
 	}
@@ -439,7 +443,7 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 		queryMap["vad_silence_time"] = strconv.FormatInt(int64(recognizer.VadSilenceTime), 10)
 	}
 	if recognizer.NoiseThreshold != 0 {
-		queryMap["noise_threshold"] = strconv.FormatInt(int64(recognizer.NoiseThreshold), 10)
+		queryMap["noise_threshold"] = strconv.FormatFloat(recognizer.NoiseThreshold, 'f', 3, 64)
 	}
 
 	var keys []string
