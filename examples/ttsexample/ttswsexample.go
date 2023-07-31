@@ -1,37 +1,16 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/tencentcloud/tencentcloud-speech-sdk-go/common"
 	"github.com/tencentcloud/tencentcloud-speech-sdk-go/tts"
-	"io/ioutil"
-	"log"
 	"path"
 	"strconv"
 	"sync"
 	"time"
 )
-
-// MainConfig 密钥配置
-type MainConfig struct {
-	SecretId  string `json:"SecretId"`
-	SecretKey string `json:"SecretKey"`
-	AppId     int    `json:"AppId"`
-}
-
-// getMainConf 获取配置信息
-func getMainConf(path string) *MainConfig {
-	buf, err := ioutil.ReadFile(path)
-	if err != nil {
-		log.Panicln("load config conf failed: ", err)
-	}
-	mainConfig := &MainConfig{}
-	json.Unmarshal(buf, mainConfig)
-	return mainConfig
-}
 
 type MySpeechWsSynthesisListener struct {
 	SessionId string
@@ -78,11 +57,15 @@ func main() {
 
 func processWs(id int, wg *sync.WaitGroup) {
 	defer wg.Done()
-	mainConfig := getMainConf("../../config.json") //配置文件读取密钥避免泄漏
+	//在腾讯云控制台账号信息页面查看账号APPID，访问管理页面获取 SecretID 和 SecretKey 。
+	secretId := "替换为自己的secretId"
+	secretKey := "替换为自己的secretKey"
+	AppId := 0 //替换为自己的appid
+
 	sessionId := fmt.Sprintf("%s_%s", strconv.Itoa(id), uuid.New().String())
 	listener := &MySpeechWsSynthesisListener{Data: make([]byte, 0), SessionId: sessionId}
-	credential := common.NewCredential(mainConfig.SecretId, mainConfig.SecretKey)
-	synthesizer := tts.NewSpeechWsSynthesizer(int64(mainConfig.AppId), credential, listener)
+	credential := common.NewCredential(secretId, secretKey)
+	synthesizer := tts.NewSpeechWsSynthesizer(int64(AppId), credential, listener)
 	synthesizer.SessionId = sessionId
 	synthesizer.VoiceType = 1001
 	synthesizer.Codec = "mp3"
