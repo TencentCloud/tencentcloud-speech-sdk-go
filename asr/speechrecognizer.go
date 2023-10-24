@@ -91,6 +91,7 @@ type SpeechRecognizer struct {
 	ReinforceHotword  int
 	NoiseThreshold    float64
 	FilterEmptyResult int
+	MaxSpeakTime	  int
 
 	Credential *common.Credential
 	//listener
@@ -128,6 +129,7 @@ const (
 	defaultConvertNumMode    = 1
 	defaultReinforceHotword  = 0
 	defaultFilterEmptyResult = 1
+	defaultMaxSpeakTime      = 0
 
 	protocol = "wss"
 	host     = "asr.cloud.tencent.com"
@@ -168,6 +170,7 @@ func NewSpeechRecognizer(appID string, credential *common.Credential, engineMode
 		WordInfo:          defaultWordInfo,
 		ReinforceHotword:  defaultReinforceHotword,
 		FilterEmptyResult: defaultFilterEmptyResult,
+		MaxSpeakTime:      defaultMaxSpeakTime,
 
 		dataChan:  make(chan []byte, 6400),
 		eventChan: make(chan speechRecognitionEvent, 10),
@@ -439,6 +442,7 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	queryMap["convert_num_mode"] = strconv.FormatInt(int64(recognizer.ConvertNumMode), 10)
 	queryMap["word_info"] = strconv.FormatInt(int64(recognizer.WordInfo), 10)
 	queryMap["reinforce_hotword"] = strconv.FormatInt(int64(recognizer.ReinforceHotword), 10)
+	queryMap["max_speak_time"] = strconv.FormatInt(int64(recognizer.MaxSpeakTime),10)
 	if recognizer.VadSilenceTime > 0 {
 		queryMap["vad_silence_time"] = strconv.FormatInt(int64(recognizer.VadSilenceTime), 10)
 	}
