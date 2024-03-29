@@ -269,13 +269,17 @@ func (synthesizer *SpeechWsSynthesizer) receive() {
 }
 
 func (synthesizer *SpeechWsSynthesizer) eventDispatch() {
+	defer func() {
+		// handle panic
+		synthesizer.genRecoverFunc()()
+		close(synthesizer.eventEnd)
+	}()
 	for e := range synthesizer.eventChan {
 		switch e.t {
 		case eventTypeWsStart:
 			synthesizer.listener.OnSynthesisStart(e.r)
 		case eventTypeWsEnd:
 			synthesizer.listener.OnSynthesisEnd(e.r)
-			close(synthesizer.eventEnd)
 		case eventTypeWsAudioResult:
 			synthesizer.listener.OnAudioResult(e.d)
 		case eventTypeWsTextResult:
