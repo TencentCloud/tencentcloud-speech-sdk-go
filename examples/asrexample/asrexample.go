@@ -134,7 +134,7 @@ func process(id int, file string) error {
 		if n <= 0 {
 			break
 		}
-		err = recognizer.Write(data)
+		err = recognizer.Write(data[:n])
 		if err != nil {
 			break
 		}
