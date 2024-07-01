@@ -18,6 +18,8 @@ var (
 	SecretID = ""
 	//SecretKey SecretKey
 	SecretKey = ""
+	// Token 只有临时秘钥鉴权需要
+	Token = ""
 
 	// SliceSize SliceSize
 	SliceSize = 1600
@@ -101,6 +103,7 @@ func process(id int, file string) error {
 	listener := &MySpeakingAssessmentListener{
 		ID: id,
 	}
+	// 临时秘钥鉴权需要使用带token的方式 credential := common.NewTokenCredential(SecretID, SecretKey, Token)
 	credential := common.NewCredential(SecretID, SecretKey)
 	recognizer := soe.NewSpeechRecognizer(AppID, credential, listener)
 	recognizer.ProxyURL = proxyURL
