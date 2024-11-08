@@ -3,11 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/tencentcloud/tencentcloud-speech-sdk-go/common"
-	"github.com/tencentcloud/tencentcloud-speech-sdk-go/soe"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/tencentcloud/tencentcloud-speech-sdk-go/common"
+	"github.com/tencentcloud/tencentcloud-speech-sdk-go/soe"
 )
 
 var (
@@ -51,6 +52,7 @@ func (listener *MySpeakingAssessmentListener) OnFail(response *soe.SpeakingAsses
 }
 
 var proxyURL string
+var recFlag = flag.Bool("rec", false, "enable rec mode")
 
 func main() {
 	var c = flag.Int("c", 1, "concurrency")
@@ -94,11 +96,11 @@ func processOnce(id int, wg *sync.WaitGroup, file string) {
 
 func process(id int, file string) error {
 	audio, err := os.Open(file)
-	defer audio.Close()
 	if err != nil {
 		fmt.Printf("open file error: %v\n", err)
 		return err
 	}
+	defer audio.Close()
 
 	listener := &MySpeakingAssessmentListener{
 		ID: id,
@@ -115,6 +117,13 @@ func process(id int, file string) error {
 	recognizer.Keyword = ""
 	recognizer.SentenceInfoEnabled = 0
 	recognizer.TextMode = 0
+	if *recFlag {
+		// 录音识别模式下可发送单个大长度分片(上限300s）
+		// 单次连接只能发一个分片,得到识别结果后需要关闭此条websocket连接，再次识别需要重新建立连接
+		// 录音识别模式适合已经存在完整录音文件数据需要一次性返回最终结果的场景
+		// 更推荐使用流式识别模式，流式识别可以相对更快的得到识别结果，有更可靠的实时率保障
+		recognizer.RecMode = 1
+	}
 	//握手阶段
 	err = recognizer.Start()
 	if err != nil {
@@ -122,27 +131,42 @@ func process(id int, file string) error {
 		return err
 	}
 	seq := 0
-	for {
-		data := make([]byte, SliceSize)
-		n, err := audio.Read(data)
+	if *recFlag {
+		// 录音识别模式可以一次性发送全部数据
+		fileDataAll, err := os.ReadFile(file)
 		if err != nil {
-			if err.Error() == "EOF" {
+			fmt.Printf("read file error: %v\n", err)
+			return err
+		}
+		if err = recognizer.Write(fileDataAll); err != nil {
+			fmt.Printf("write data error: %v\n", err)
+			return err
+		}
+	} else {
+		// 流式识别模式，需要分片发送音频数据
+		for {
+			data := make([]byte, SliceSize)
+			n, err := audio.Read(data)
+			if err != nil {
+				if err.Error() == "EOF" {
+					break
+				}
+				fmt.Printf("read file error: %v\n", err)
 				break
 			}
-			fmt.Printf("read file error: %v\n", err)
-			break
+			if n <= 0 {
+				break
+			}
+			err = recognizer.Write(data)
+			if err != nil {
+				break
+			}
+			//模拟真实场景，200ms产生200ms数据
+			time.Sleep(200 * time.Millisecond)
+			seq++
 		}
-		if n <= 0 {
-			break
-		}
-		err = recognizer.Write(data)
-		if err != nil {
-			break
-		}
-		//模拟真实场景，200ms产生200ms数据
-		time.Sleep(200 * time.Millisecond)
-		seq++
 	}
+
 	recognizer.Stop()
 	return nil
 }
