@@ -139,7 +139,7 @@ func process(id int, file string) error {
 			break
 		}
 		//模拟真实场景，200ms产生200ms数据
-		//time.Sleep(200 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond)
 	}
 	recognizer.Stop()
 	return nil
