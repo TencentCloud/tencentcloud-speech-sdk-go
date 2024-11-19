@@ -139,6 +139,7 @@ func process(id int, file string) error {
 			break
 		}
 		//模拟真实场景，200ms产生200ms数据
+		//注意：该行sleep代码用于模拟实时音频流1:1产生音频数据(每200ms产生200ms音频)，实际音频流场景建议删除该行代码，或业务根据自己的需求情况自行调整
 		time.Sleep(200 * time.Millisecond)
 	}
 	recognizer.Stop()
