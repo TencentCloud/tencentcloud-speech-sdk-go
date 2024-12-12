@@ -70,6 +70,7 @@ type SpeechWsSynthesizer struct {
 	EmotionCategory  string  `json:"EmotionCategory"`
 	EmotionIntensity int64   `json:"EmotionIntensity"`
 	SegmentRate      int64   `json:"SegmentRate"`
+	FastVoiceType    string  `json:"FastVoiceType"`
 	ExtParam         map[string]string
 
 	ProxyURL    string
@@ -245,7 +246,7 @@ func (synthesizer *SpeechWsSynthesizer) receive() {
 			}
 			msg.SessionId = synthesizer.SessionId
 			if msg.Code != 0 {
-				synthesizer.onError(fmt.Errorf("VoiceID: %s, error code %d, message: %s",
+				synthesizer.onErrorResp(msg, fmt.Errorf("VoiceID: %s, error code %d, message: %s",
 					synthesizer.SessionId, msg.Code, msg.Message))
 				break
 			}
@@ -324,6 +325,15 @@ func (synthesizer *SpeechWsSynthesizer) onError(err error) {
 	}
 }
 
+func (synthesizer *SpeechWsSynthesizer) onErrorResp(resp SpeechWsSynthesisResponse, err error) {
+	synthesizer.closeConn()
+	synthesizer.eventChan <- speechWsSynthesisEvent{
+		t:   eventTypeWsFail,
+		r:   &resp,
+		err: err,
+	}
+}
+
 func (synthesizer *SpeechWsSynthesizer) buildURL(escape bool) string {
 	var queryMap = make(map[string]string)
 	queryMap["Action"] = synthesizer.action
@@ -337,6 +347,7 @@ func (synthesizer *SpeechWsSynthesizer) buildURL(escape bool) string {
 	} else {
 		queryMap["Text"] = synthesizer.Text
 	}
+	queryMap["FastVoiceType"] = synthesizer.FastVoiceType
 	queryMap["SessionId"] = synthesizer.SessionId
 	queryMap["ModelType"] = strconv.FormatInt(synthesizer.ModelType, 10)
 	queryMap["VoiceType"] = strconv.FormatInt(synthesizer.VoiceType, 10)
