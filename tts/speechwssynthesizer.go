@@ -225,6 +225,9 @@ func (synthesizer *SpeechWsSynthesizer) receive() {
 			break
 		}
 		if optCode == websocket.BinaryMessage {
+			if synthesizer.Debug && synthesizer.DebugFunc != nil {
+				synthesizer.DebugFunc(fmt.Sprintf("[%s] receive binary message size: %d", synthesizer.SessionId, len(data)))
+			}
 			msg := SpeechWsSynthesisResponse{SessionId: synthesizer.SessionId}
 			synthesizer.eventChan <- speechWsSynthesisEvent{
 				t:   eventTypeWsAudioResult,
@@ -235,7 +238,7 @@ func (synthesizer *SpeechWsSynthesizer) receive() {
 		}
 		if optCode == websocket.TextMessage {
 			if synthesizer.Debug && synthesizer.DebugFunc != nil {
-				synthesizer.DebugFunc(string(data))
+				synthesizer.DebugFunc(fmt.Sprintf("[%s]  receive text message: %s", synthesizer.SessionId, string(data)))
 			}
 			msg := SpeechWsSynthesisResponse{}
 			err = json.Unmarshal(data, &msg)
