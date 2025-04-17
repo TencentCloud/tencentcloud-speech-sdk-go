@@ -115,6 +115,7 @@ type SpeechRecognizer struct {
 	ScoreCoeff          float64
 	ServerEngineType    string
 	SentenceInfoEnabled int64
+	RecMode             int
 
 	Credential *common.Credential
 	//listener
@@ -415,6 +416,7 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	queryMap["score_coeff"] = fmt.Sprintf("%1f", recognizer.ScoreCoeff)
 	queryMap["server_engine_type"] = recognizer.ServerEngineType
 	queryMap["sentence_info_enabled"] = strconv.FormatInt(int64(recognizer.SentenceInfoEnabled), 10)
+	queryMap["rec_mode"] = strconv.FormatInt(int64(recognizer.RecMode), 10)
 
 	var keys []string
 	for k := range queryMap {
