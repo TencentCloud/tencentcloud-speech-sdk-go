@@ -91,7 +91,8 @@ type SpeechRecognizer struct {
 	ReinforceHotword  int
 	NoiseThreshold    float64
 	FilterEmptyResult int
-	MaxSpeakTime	  int
+	MaxSpeakTime      int
+	ReplaceTextId     string
 
 	Credential *common.Credential
 	//listener
@@ -435,6 +436,11 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	if recognizer.CustomizationId != "" {
 		queryMap["customization_id"] = recognizer.CustomizationId
 	}
+
+	if recognizer.ReplaceTextId != "" {
+		queryMap["replace_text_id"] = recognizer.ReplaceTextId
+	}
+
 	queryMap["filter_dirty"] = strconv.FormatInt(int64(recognizer.FilterDirty), 10)
 	queryMap["filter_modal"] = strconv.FormatInt(int64(recognizer.FilterModal), 10)
 	queryMap["filter_punc"] = strconv.FormatInt(int64(recognizer.FilterPunc), 10)
@@ -442,7 +448,7 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	queryMap["convert_num_mode"] = strconv.FormatInt(int64(recognizer.ConvertNumMode), 10)
 	queryMap["word_info"] = strconv.FormatInt(int64(recognizer.WordInfo), 10)
 	queryMap["reinforce_hotword"] = strconv.FormatInt(int64(recognizer.ReinforceHotword), 10)
-	queryMap["max_speak_time"] = strconv.FormatInt(int64(recognizer.MaxSpeakTime),10)
+	queryMap["max_speak_time"] = strconv.FormatInt(int64(recognizer.MaxSpeakTime), 10)
 	if recognizer.VadSilenceTime > 0 {
 		queryMap["vad_silence_time"] = strconv.FormatInt(int64(recognizer.VadSilenceTime), 10)
 	}
