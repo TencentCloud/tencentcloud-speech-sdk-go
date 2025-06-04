@@ -115,6 +115,10 @@ type SpeechRecognizer struct {
 	ScoreCoeff          float64
 	ServerEngineType    string
 	SentenceInfoEnabled int64
+	// 录音识别模式，0:实时识别 1:录音识别
+	// 录音识别下可发送单个大长度分片，但是单次连接只能发一个分片,对音频的大小有限制，得到识别结果后需要重新建立连接
+	// 推荐使用实时识别模式
+	RecMode int
 
 	Credential *common.Credential
 	//listener
@@ -181,6 +185,7 @@ func NewSpeechRecognizer(appID string, credential *common.Credential,
 		Keyword:             "",
 		EvalMode:            0,
 		ScoreCoeff:          1.0,
+		RecMode:             0,
 		ServerEngineType:    "16k_en",
 		SentenceInfoEnabled: 0,
 		Credential:          credential,
@@ -225,7 +230,6 @@ func (recognizer *SpeechRecognizer) Start() error {
 
 	header := http.Header(make(map[string][]string))
 	urlStr := fmt.Sprintf("%s://%s&signature=%s", protocol, serverURL, url.QueryEscape(signature))
-
 	conn, _, err := dialer.Dial(urlStr, header)
 	if err != nil {
 		return fmt.Errorf("voice_id: %s, error: %s", recognizer.VoiceID, err.Error())
@@ -400,6 +404,10 @@ func (recognizer *SpeechRecognizer) receive() {
 func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	var queryMap = make(map[string]string)
 	queryMap["secretid"] = recognizer.Credential.SecretId
+	// token参数用于临时秘钥鉴权
+	if recognizer.Credential.Token != "" {
+		queryMap["token"] = recognizer.Credential.Token
+	}
 	var timestamp = time.Now().Unix()
 	var timestampStr = strconv.FormatInt(timestamp, 10)
 	queryMap["timestamp"] = timestampStr
@@ -415,6 +423,7 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	queryMap["score_coeff"] = fmt.Sprintf("%1f", recognizer.ScoreCoeff)
 	queryMap["server_engine_type"] = recognizer.ServerEngineType
 	queryMap["sentence_info_enabled"] = strconv.FormatInt(int64(recognizer.SentenceInfoEnabled), 10)
+	queryMap["rec_mode"] = strconv.FormatInt(int64(recognizer.RecMode), 10)
 
 	var keys []string
 	for k := range queryMap {
