@@ -93,6 +93,7 @@ type SpeechRecognizer struct {
 	FilterEmptyResult int
 	MaxSpeakTime      int
 	ReplaceTextId     string
+	ChatVadEnable     int
 
 	Credential *common.Credential
 	//listener
@@ -454,6 +455,9 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	}
 	if recognizer.NoiseThreshold != 0 {
 		queryMap["noise_threshold"] = strconv.FormatFloat(recognizer.NoiseThreshold, 'f', 3, 64)
+	}
+	if recognizer.ChatVadEnable > 0 {
+		queryMap["chat_vad_enable"] =  strconv.FormatInt(int64(recognizer.ChatVadEnable), 10)
 	}
 
 	var keys []string
