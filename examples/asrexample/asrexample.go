@@ -116,7 +116,6 @@ func process(id int, file string) error {
 	recognizer := asr.NewSpeechRecognizer(AppID, credential, EngineModelType, listener)
 	recognizer.ProxyURL = proxyURL
 	recognizer.VoiceFormat = asr.AudioFormatPCM
-	recognizer.ChatVadEnable = 1
 	err = recognizer.Start()
 	if err != nil {
 		fmt.Printf("%s|recognizer start failed, error: %v\n", time.Now().Format("2006-01-02 15:04:05"), err)
