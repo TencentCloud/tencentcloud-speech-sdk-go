@@ -16,9 +16,9 @@ var (
 	// AppID AppID
 	AppID = "AppID"
 	// SecretID SecretID
-	SecretID = "SecretID"
+	SecretID = ""
 	// SecretKey SecretKey
-	SecretKey = "SecretKey"
+	SecretKey = ""
 	// EngineType EngineType
 	EngineType = "16k_zh"
 )

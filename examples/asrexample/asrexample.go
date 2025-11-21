@@ -13,11 +13,11 @@ import (
 
 var (
 	// AppID AppID
-	AppID = "AppID"
+	AppID = ""
 	// SecretID SecretID
-	SecretID = "SecretID"
+	SecretID = ""
 	// SecretKey SecretKey
-	SecretKey = "SecretKey"
+	SecretKey = ""
 	// EngineModelType EngineModelType
 	EngineModelType = "16k_zh"
 	// SliceSize SliceSize
