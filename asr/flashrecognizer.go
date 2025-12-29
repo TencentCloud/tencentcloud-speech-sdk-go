@@ -35,6 +35,7 @@ type FlashRecognitionRequest struct {
 	FirstChannelOnly   int32  `json:"first_channel_only"`
 	ReinforceHotword   int32  `json:"reinforce_hotword"`
 	SentenceMaxLength  int32  `json:"sentence_max_length"`
+	ReplaceTextId      string `json:"replace_text_id"`
 }
 
 // FlashRecognitionResponse FlashRecognitionResponse
@@ -196,6 +197,7 @@ func (recognizer *FlashRecognizer) buildURL(req *FlashRecognitionRequest) (strin
 	queryMap["first_channel_only"] = strconv.FormatInt(int64(req.FirstChannelOnly), 10)
 	queryMap["reinforce_hotword"] = strconv.FormatInt(int64(req.ReinforceHotword), 10)
 	queryMap["sentence_max_length"] = strconv.FormatInt(int64(req.SentenceMaxLength), 10)
+	queryMap["replace_text_id"] = req.ReplaceTextId
 	var timestamp = time.Now().Unix()
 	var timestampStr = strconv.FormatInt(timestamp, 10)
 	queryMap["timestamp"] = timestampStr
