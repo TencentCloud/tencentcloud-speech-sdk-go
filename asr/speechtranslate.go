@@ -43,8 +43,6 @@ type SpeechTranslateRequest struct {
 	Source      string `json:"source"`
 	Target      string `json:"target"`
 	TransModel  string `json:"trans_model"`
-	Region      string `json:"region"`
-	Token       string `json:"token"`
 	Signature   string `json:"signature"`
 }
 
@@ -80,8 +78,6 @@ type SpeechTranslator struct {
 	Source      string // 源语言
 	Target      string // 目标语言
 	TransModel  string // 翻译模型
-	Region      string // 地域信息
-	Token       string // 临时证书token
 
 	// 监听器
 	listener SpeechTranslateListener
@@ -394,12 +390,6 @@ func (translator *SpeechTranslator) buildURL(voiceID string) string {
 	queryMap["source"] = translator.Source
 	queryMap["target"] = translator.Target
 	queryMap["trans_model"] = translator.TransModel
-	if translator.Region != "" {
-		queryMap["region"] = translator.Region
-	}
-	if translator.Token != "" {
-		queryMap["token"] = translator.Token
-	}
 
 	var keys []string
 	for k := range queryMap {
