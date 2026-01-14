@@ -60,13 +60,13 @@ type SpeechTranslateResponse struct {
 
 // SentenceInfo 句子翻译信息
 type SentenceInfo struct {
-	Source      string `json:"Source"`
-	Target      string `json:"Target"`
-	SourceText  string `json:"SourceText"`
-	TargetText  string `json:"TargetText"`
-	StartTime   uint32 `json:"StartTime"`
-	EndTime     uint32 `json:"EndTime"`
-	SentenceEnd bool   `json:"SentenceEnd"`
+	Source      string `json:"source"`
+	Target      string `json:"target"`
+	SourceText  string `json:"source_text"`
+	TargetText  string `json:"target_text"`
+	StartTime   uint32 `json:"start_time"`
+	EndTime     uint32 `json:"end_time"`
+	SentenceEnd bool   `json:"sentence_end"`
 }
 
 // SpeechTranslator 语音翻译器，是语音翻译服务的入口
@@ -280,7 +280,7 @@ func (translator *SpeechTranslator) send() {
 		}
 	}
 	// 发送结束消息
-	if err := translator.conn.WriteMessage(websocket.TextMessage, []byte("{\"end\":\"1\"}")); err != nil {
+	if err := translator.conn.WriteMessage(websocket.TextMessage, []byte("{\"type\":\"end\"}")); err != nil {
 		translator.onError(-1, "send error", fmt.Errorf("voice_id: %s, error: %s",
 			translator.VoiceID, err.Error()))
 	}
