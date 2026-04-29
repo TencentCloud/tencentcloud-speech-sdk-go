@@ -31,12 +31,12 @@ type SpeakerRecognitionListener interface {
 
 // SpeakerRecognitionResponse is the response of sentence mode asr service
 type SpeakerRecognitionResponse struct {
-	Code             int              `json:"code"`
-	Message          string           `json:"message"`
-	VoiceID          string           `json:"voice_id,omitempty"`
-	MessageID        string           `json:"message_id,omitempty"`
-	SpeakerContextId string           `json:"speaker_context_id,omitempty"`
-	Final            uint32           `json:"final,omitempty"`
+	Code             int               `json:"code"`
+	Message          string            `json:"message"`
+	VoiceID          string            `json:"voice_id,omitempty"`
+	MessageID        string            `json:"message_id,omitempty"`
+	SpeakerContextId string            `json:"speaker_context_id,omitempty"`
+	Final            uint32            `json:"final,omitempty"`
 	Sentences        *SpeakerSentences `json:"sentences,omitempty"`
 }
 
@@ -58,26 +58,27 @@ type SpeakerSentenceItem struct {
 // SpeakerRecognizer is the entry for sentence mode ASR service with speaker context
 type SpeakerRecognizer struct {
 	//request params
-	AppID             string
-	EngineModelType   string
-	VoiceFormat       int
-	NeedVad           int
-	HotwordId         string
-	HotwordList       string
-	CustomizationId   string
-	ConvertNumMode    int
-	VadSilenceTime    int
-	ReinforceHotword  int
-	NoiseThreshold    float64
-	ReplaceTextId     string
-	SentenceStrategy  int
+	AppID            string
+	EngineModelType  string
+	VoiceFormat      int
+	NeedVad          int
+	HotwordId        string
+	HotwordList      string
+	CustomizationId  string
+	ConvertNumMode   int
+	VadSilenceTime   int
+	ReinforceHotword int
+	NoiseThreshold   float64
+	ReplaceTextId    string
+	SentenceStrategy int
+	Domain           int
 
 	//speaker context
-	SpeakerDiarization  int
+	SpeakerDiarization   int
 	EnableSpeakerContext int
-	SpeakerContextId    string
-	LanguageJudgment    int
-	EmotionRecognition  int
+	SpeakerContextId     string
+	LanguageJudgment     int
+	EmotionRecognition   int
 
 	Credential *common.Credential
 	//listener
@@ -114,10 +115,10 @@ const (
 
 // speaker recognizer default values (self-contained, no dependency on speechrecognizer.go)
 const (
-	speakerDefaultVoiceFormat       = 1
-	speakerDefaultNeedVad           = 1
-	speakerDefaultConvertNumMode    = 1
-	speakerDefaultReinforceHotword  = 0
+	speakerDefaultVoiceFormat      = 1
+	speakerDefaultNeedVad          = 1
+	speakerDefaultConvertNumMode   = 1
+	speakerDefaultReinforceHotword = 0
 
 	speakerProtocol = "wss"
 	speakerHost     = "asr.cloud.tencent.com"
@@ -148,14 +149,14 @@ func NewSpeakerRecognizer(appID string, credential *common.Credential, engineMod
 	listener SpeakerRecognitionListener) *SpeakerRecognizer {
 
 	reco := &SpeakerRecognizer{
-		AppID:             appID,
-		Credential:        credential,
-		EngineModelType:   engineModelType,
-		VoiceFormat:       speakerDefaultVoiceFormat,
-		NeedVad:           speakerDefaultNeedVad,
-		ConvertNumMode:    speakerDefaultConvertNumMode,
-		ReinforceHotword:  speakerDefaultReinforceHotword,
-		SentenceStrategy:  1,
+		AppID:            appID,
+		Credential:       credential,
+		EngineModelType:  engineModelType,
+		VoiceFormat:      speakerDefaultVoiceFormat,
+		NeedVad:          speakerDefaultNeedVad,
+		ConvertNumMode:   speakerDefaultConvertNumMode,
+		ReinforceHotword: speakerDefaultReinforceHotword,
+		SentenceStrategy: 1,
 
 		dataChan:  make(chan []byte, 6400),
 		eventChan: make(chan speakerRecognitionEvent, 10),
@@ -411,6 +412,9 @@ func (recognizer *SpeakerRecognizer) buildURL(voiceID string) string {
 	}
 	if recognizer.ReplaceTextId != "" {
 		queryMap["replace_text_id"] = recognizer.ReplaceTextId
+	}
+	if recognizer.Domain > 0 {
+		queryMap["domain"] = strconv.FormatInt(int64(recognizer.Domain), 10)
 	}
 
 	queryMap["convert_num_mode"] = strconv.FormatInt(int64(recognizer.ConvertNumMode), 10)
