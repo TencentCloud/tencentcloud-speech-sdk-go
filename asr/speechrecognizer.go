@@ -95,6 +95,7 @@ type SpeechRecognizer struct {
 	ReplaceTextId     string
 	ChatVadEnable     int
 	Domain            int
+	InputSampleRate   int
 
 	Credential *common.Credential
 	//listener
@@ -462,6 +463,9 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 	}
 	if recognizer.Domain > 0 {
 		queryMap["domain"] = strconv.FormatInt(int64(recognizer.Domain), 10)
+	}
+	if recognizer.InputSampleRate > 0 {
+		queryMap["input_sample_rate"] = strconv.FormatInt(int64(recognizer.InputSampleRate), 10)
 	}
 
 	var keys []string
