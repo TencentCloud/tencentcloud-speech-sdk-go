@@ -157,6 +157,7 @@ func NewSpeakerRecognizer(appID string, credential *common.Credential, engineMod
 		ConvertNumMode:   speakerDefaultConvertNumMode,
 		ReinforceHotword: speakerDefaultReinforceHotword,
 		SentenceStrategy: 1,
+		SpeakerDiarization: 1,
 
 		dataChan:  make(chan []byte, 6400),
 		eventChan: make(chan speakerRecognitionEvent, 10),
@@ -277,12 +278,9 @@ func (recognizer *SpeakerRecognizer) onError(code int, message string, err error
 		return
 	}
 
-	recognizer.eventChan <- speakerRecognitionEvent{
-		t: speakerEventTypeFail,
-		r: newSpeakerRecognitionResponse(code, fmt.Sprintf("%s: %v", message, err),
-			recognizer.VoiceID, fmt.Sprintf("%s-Error", recognizer.VoiceID), 0),
-		err: err,
-	}
+	recognizer.listener.OnFail(newSpeakerRecognitionResponse(code,
+		fmt.Sprintf("%s: %v", message, err), recognizer.VoiceID,
+		fmt.Sprintf("%s-Error", recognizer.VoiceID), 0), err)
 	go recognizer.stopInternal()
 }
 
