@@ -97,6 +97,12 @@ type SpeechRecognizer struct {
 	Domain            int
 	InputSampleRate   int
 
+	// ExtraParams 扩展参数：用于支持隐藏参数或后续新增参数，无需升级 SDK。
+	// 这里的 key/value 会以 query string 形式拼接到 ws URL 上，并参与签名计算。
+	// 同名 key 会覆盖 SDK 默认填充的字段（如 voice_format、word_info 等），
+	// 这是为隐藏参数的"覆盖默认值"场景刻意保留的能力。
+	ExtraParams map[string]string
+
 	Credential *common.Credential
 	//listener
 	listener SpeechRecognitionListener
@@ -121,6 +127,12 @@ type SpeechRecognizer struct {
 
 	mutex   sync.Mutex
 	started bool
+	// closed 表示该实例已被 Stop 过，进入终止态后不允许再次 Start。
+	// 这个 SDK 的设计是每个实例对应一次 ws 会话，复用实例需要新建。
+	closed bool
+	// errOnce 用于保证 OnFail 回调只触发一次。
+	// 网络断开时 send/receive 会并发报错，没有 Once 会造成同一错误被回调多次。
+	errOnce sync.Once
 }
 
 const (
@@ -194,6 +206,9 @@ func (recognizer *SpeechRecognizer) Start() error {
 	recognizer.mutex.Lock()
 	defer recognizer.mutex.Unlock()
 
+	if recognizer.closed {
+		return fmt.Errorf("recognizer has been stopped, please create a new instance")
+	}
 	if recognizer.started {
 		return fmt.Errorf("recognizer is already started")
 	}
@@ -280,27 +295,21 @@ func (recognizer *SpeechRecognizer) stopInternal() error {
 	<-recognizer.sendEnd
 	<-recognizer.eventEnd
 	recognizer.started = false
+	// 置为终止态：禁止再次 Start，避免向已 close 的 channel 发送/重复 close 导致 panic。
+	recognizer.closed = true
 	return nil
 }
 
 func (recognizer *SpeechRecognizer) onError(code int, message string, err error) {
-	//recognizer.mutex.Lock()
-	if !recognizer.started {
-		return
-	}
-
-	recognizer.listener.OnFail(newSpeechRecognitionResponse(code, message, recognizer.VoiceID,
-		fmt.Sprintf("%s-Error", recognizer.VoiceID), 0), err)
-	/*
-			recognizer.eventChan <- speechRecognitionEvent{
-				t: eventTypeFail,
-				r: newSpeechRecognitionResponse(code, message, recognizer.VoiceID,
-					fmt.Sprintf("%s-Error", recognizer.VoiceID), 0),
-				err: err,
-			}
-		    recognizer.mutex.Unlock()
-	*/
-	go recognizer.stopInternal()
+	// 只触发一次：避免 send/receive 同时报错导致 OnFail 被回调多次。
+	recognizer.errOnce.Do(func() {
+		if !recognizer.started {
+			return
+		}
+		recognizer.listener.OnFail(newSpeechRecognitionResponse(code, message, recognizer.VoiceID,
+			fmt.Sprintf("%s-Error", recognizer.VoiceID), 0), err)
+		go recognizer.stopInternal()
+	})
 }
 
 func (recognizer *SpeechRecognizer) send() {
@@ -468,6 +477,15 @@ func (recognizer *SpeechRecognizer) buildURL(voiceID string) string {
 		queryMap["input_sample_rate"] = strconv.FormatInt(int64(recognizer.InputSampleRate), 10)
 	}
 
+	// 合并扩展参数：放在最后，允许覆盖 SDK 默认填充的字段；
+	// 空 key 直接忽略，避免污染 query 串。
+	for k, v := range recognizer.ExtraParams {
+		if k == "" {
+			continue
+		}
+		queryMap[k] = v
+	}
+
 	var keys []string
 	for k := range queryMap {
 		keys = append(keys, k)
@@ -531,5 +549,33 @@ func (recognizer *SpeechRecognizer) genRecoverFunc() func() {
 				err: retErr,
 			}
 		}
+	}
+}
+
+// SetExtraParam 设置单个扩展参数，便于调用方动态追加隐藏/新增参数。
+// 同名 key 会覆盖 SDK 默认填充的字段。
+func (recognizer *SpeechRecognizer) SetExtraParam(key, value string) {
+	if key == "" {
+		return
+	}
+	if recognizer.ExtraParams == nil {
+		recognizer.ExtraParams = make(map[string]string)
+	}
+	recognizer.ExtraParams[key] = value
+}
+
+// SetExtraParams 批量设置扩展参数，会与已有的 ExtraParams 合并（同名覆盖）。
+func (recognizer *SpeechRecognizer) SetExtraParams(params map[string]string) {
+	if len(params) == 0 {
+		return
+	}
+	if recognizer.ExtraParams == nil {
+		recognizer.ExtraParams = make(map[string]string, len(params))
+	}
+	for k, v := range params {
+		if k == "" {
+			continue
+		}
+		recognizer.ExtraParams[k] = v
 	}
 }

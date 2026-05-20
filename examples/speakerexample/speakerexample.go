@@ -122,6 +122,10 @@ func process(id int, file string) error {
 	// 首次不设 SpeakerContextId，Start() 后从 OnRecognitionStart 回调拿到
 	// 后续可设置：recognizer.SpeakerContextId = "之前拿到的id"
 
+	// 演示扩展参数能力：通过 ExtraParams 动态追加 SDK 未显式定义的参数。
+	// 同名 key 也可用于覆盖 SDK 默认填充的字段，例如：
+	//   recognizer.SetExtraParam("result_mod", "0") // 覆盖 SDK 默认强制的 result_mod=1
+
 	err = recognizer.Start()
 	if err != nil {
 		fmt.Printf("%s|recognizer start failed, error: %v\n", time.Now().Format("2006-01-02 15:04:05"), err)
