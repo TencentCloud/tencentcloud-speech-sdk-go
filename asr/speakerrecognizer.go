@@ -38,6 +38,13 @@ type SpeakerRecognitionResponse struct {
 	SpeakerContextId string            `json:"speaker_context_id,omitempty"`
 	Final            uint32            `json:"final,omitempty"`
 	Sentences        *SpeakerSentences `json:"sentences,omitempty"`
+
+	// RawMessage 服务端返回的原始 JSON 字节。
+	// 仅当用户通过 SetExtraParam/SetExtraParams 设置了扩展参数时填充，
+	// 用于业务侧解析 SDK 未显式定义的扩展响应字段。
+	// 未使用扩展参数的存量调用方该字段恒为 nil，行为与改动前完全一致。
+	// 不参与 JSON 序列化（json:"-"）。
+	RawMessage []byte `json:"-"`
 }
 
 // SpeakerSentences wraps sentence list from server
@@ -366,6 +373,11 @@ func (recognizer *SpeakerRecognizer) receive() {
 				fmt.Errorf("voice_id: %s, error: %s",
 					recognizer.VoiceID, err.Error()))
 			break
+		}
+		// 仅当用户使用了扩展参数时回填原始消息，便于业务解析 SDK 未显式定义的字段。
+		// 存量未用 ExtraParams 的调用方此字段恒为 nil，行为不变。
+		if len(recognizer.ExtraParams) > 0 {
+			msg.RawMessage = data
 		}
 		if msg.Code != 0 {
 			recognizer.onError(msg.Code, msg.Message,
